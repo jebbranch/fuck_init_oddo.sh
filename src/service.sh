@@ -1,17 +1,42 @@
 #!/system/bin/sh
+check_single_instance() {
+    local script_path="$(readlink -f "$0")"
+    local current_pid=$$
+    local pids=$(pgrep -f "$script_path" | grep -v "^$current_pid$" | grep -v grep)
+
+    if [ -n "$pids" ]; then
+        if tty -s; then
+            # 交互式终端：询问用户
+            echo "另一个实例正在运行 (PID: $pids)。是否终止它？(Y/N)"
+            read answer
+            case $answer in
+                [Yy]*)
+                    kill -9 $pids 2>/dev/null
+                    echo "已终止旧实例。"
+                    ;;
+                *)
+                    echo "退出新实例。"
+                    exit 1
+                    ;;
+            esac
+        else
+            # 无终端（如开机自启）：自动终止旧实例
+            echo "检测到旧实例 (PID: $pids)，自动终止。"
+            kill -9 $pids 2>/dev/null
+        fi
+    fi
+}
 
 TARGET="/vendor/bin/init.oddo.sh"
-LIMIT=180
-CHECK_INTERVAL=8
+LIMIT=60
+CHECK_INTERVAL=5
 
-BASE="/data/local/tmp/oddo_watchdog"
-STATE="$BASE/state"
-LOG="$BASE/history.log"
+BASE_DIR="/data/adb/modules/oddo_killer/cache"
+STATE="$BASE_DIR/state"
+LOG="$BASE_DIR/history.log"
+WEB="/data/adb/modules/oddo_killer/web"
 
-WEB="/data/adb/modules/oddo-killer/web"
-
-mkdir -p "$WEB"
-mkdir -p "$BASE"
+mkdir -p "$BASE_DIR"
 
 STATUS_JSON="$WEB/status.json"
 LOG_JSON="$WEB/log.json"
@@ -33,8 +58,8 @@ done
 
 
 # 启动 Web
-busybox httpd -p 8080 -h "$WEB"
-log -t oddo_watchdog "Web panel: http://127.0.0.1:8080"
+busybox httpd -p 7891 -h "$WEB"
+log -t oddo_killer "Web panel: http://127.0.0.1:7891"
 
 while true
 do
@@ -77,19 +102,33 @@ do
     fi
 
     # 更新状态 JSON
-    echo "{
+TMP="$STATUS_JSON.tmp"
+TMPLOG="$LOG_JSON.tmp"
+
+echo "[" > "$TMPLOG"
+tail -n 20 "$LOG" 2>/dev/null | while read line
+do
+    echo "{\"log\":\"$line\"}," >> "$TMPLOG"
+done
+echo "{}]" >> "$TMPLOG"
+
+mv "$TMPLOG" "$LOG_JSON"
+
+echo "{
 \"runtime\":\"$RUN_TIME\",
 \"run_count\":\"$RUN_COUNT\",
 \"kill_count\":\"$KILL_COUNT\"
-}" > "$JSON_STATUS"
+}" > "$TMP"
 
-    # 更新日志 JSON（取最后 20 条）
-    echo "[" > "$JSON_LOG"
-    tail -n 20 "$LOG" 2>/dev/null | while read line
-    do
-        echo "{\"log\":\"$line\"}," >> "$JSON_LOG"
-    done
-    echo "{}]" >> "$JSON_LOG"
+# mv "$TMP" "$STATUS_JSON"
+
+    # # 更新日志 JSON（取最后 20 条）
+    # echo "[" > "$LOG_JSON"
+    # tail -n 20 "$LOG" 2>/dev/null | while read line
+    # do
+        # echo "{\"log\":\"$line\"}," >> "$LOG_JSON"
+    # done
+    # echo "{}]" >> "$LOG_JSON"
 
     sleep $CHECK_INTERVAL
 done

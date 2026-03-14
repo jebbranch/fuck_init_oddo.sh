@@ -1,6 +1,6 @@
 id=oddo_killer
 name=Fuck init.oddo.sh
-version=1.2
-versionCode=3
+version=1.3
+versionCode=4
 author=狐言&DeepSeek
-description=Kill fucking /vendor/bin/init.oddo.sh if running longer than fucking 3 minutes\n（1.1版本更新web管理，优化匹配方案）\n（1.2修复日志问题）
+description=Kill fucking /vendor/bin/init.oddo.sh if running longer than fucking 60s \n你若安好，便是晴天😁
