@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Watchdog Panel</title>
+<style>
+body{
+background:#0f1115;
+color:#00ff9c;
+font-family:monospace;
+padding:20px;
+}
+.card{
+margin:10px 0;
+font-size:18px;
+}
+.log{
+background:#000;
+padding:10px;
+height:300px;
+overflow:auto;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Process Watchdog</h2>
+
+<div class="card">Runtime: <span id="runtime"></span> s</div>
+<div class="card">Run Count: <span id="run"></span></div>
+<div class="card">Kill Count: <span id="kill"></span></div>
+
+<h3>Kill Logs</h3>
+<div class="log" id="logs"></div>
+
+<script>
+async function update(){
+
+let s = await fetch("status.json?t="+Date.now());
+let j = await s.json();
+
+runtime.innerText=j.runtime;
+run.innerText=j.run_count;
+kill.innerText=j.kill_count;
+
+let l = await fetch("log.json?t="+Date.now());
+let lj = await l.json();
+
+logs.innerHTML="";
+
+lj.forEach(i=>{
+ if(i.log)
+ logs.innerHTML+=i.log+"<br>";
+});
+}
+
+setInterval(update,1000);
+update();
+</script>
+
+</body>
+</html>
