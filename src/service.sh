@@ -1,61 +1,84 @@
 #!/system/bin/sh
 
-TARGET_NAME="init.oddo.sh"
-LIMIT=180              # 超时时间（秒）
-WARNING_TIME=20        # 提前警告时间
-CHECK_INTERVAL=20      # 检测间隔（秒）
-STATE_FILE="/data/local/tmp/oddo_watch"
+TARGET="/vendor/bin/init.oddo.sh"
+LIMIT=180
+CHECK_INTERVAL=8
 
-log(){
-    echo "[oddo-killer] $1"
-}
+BASE="/data/local/tmp/oddo_watchdog"
+STATE="$BASE/state"
+LOG="$BASE/history.log"
+
+WEB="/data/adb/modules/oddo-watchdog/web"
+JSON_STATUS="$WEB/status.json"
+JSON_LOG="$WEB/log.json"
+
+mkdir -p "$BASE"
+
+RUN_COUNT=0
+KILL_COUNT=0
+
+until [ "$(getprop sys.boot_completed)" = "1" ]; do
+    sleep 3
+done
+
+# 启动 Web
+busybox httpd -p 8080 -h "$WEB"
+log -t oddo_watchdog "Web panel: http://127.0.0.1:8080"
 
 while true
 do
-    PID=$(pidof $TARGET_NAME)
+    PID=$(pgrep -f "$TARGET")
+
+    NOW=$(date +%s)
+    TIME_STR=$(date "+%Y-%m-%d %H:%M:%S")
 
     if [ -n "$PID" ]; then
-        NOW=$(date +%s)
 
-        if [ ! -f "$STATE_FILE" ]; then
-            echo "$PID $NOW" > "$STATE_FILE"
-            log "Detected PID=$PID start timing"
+        CMD=$(ps -A -o PID,ARGS | grep "$PID" | grep "$TARGET" | head -n 1 | sed 's/^[ ]*//')
+
+        if [ ! -f "$STATE" ]; then
+            echo "$PID $NOW" > "$STATE"
+            RUN_COUNT=$((RUN_COUNT+1))
         else
-            OLD_PID=$(awk '{print $1}' $STATE_FILE)
-            START_TIME=$(awk '{print $2}' $STATE_FILE)
+            OLD_PID=$(awk '{print $1}' $STATE)
+            START=$(awk '{print $2}' $STATE)
 
             if [ "$OLD_PID" != "$PID" ]; then
-                echo "$PID $NOW" > "$STATE_FILE"
-                log "PID changed, reset timer"
+                echo "$PID $NOW" > "$STATE"
             else
-                RUN_TIME=$((NOW - START_TIME))
+                RUN_TIME=$((NOW - START))
 
                 if [ "$RUN_TIME" -ge "$LIMIT" ]; then
 
-                    log "Timeout $RUN_TIME s, warning before kill"
+                    echo "$TIME_STR | $CMD | pid=$PID" >> "$LOG"
 
-                    cmd notification post -S bigtext -t "Fuck oddo" oddo_watch \
-                    "init.oddo.sh 已运行超过3分钟，20秒后将强制结束以降低发热"
+                    KILL_COUNT=$((KILL_COUNT+1))
 
-                    sleep $WARNING_TIME
+                    kill -9 "$PID"
 
-                    NEW_PID=$(pidof $TARGET_NAME)
-
-                    # 二次确认 PID 未变化且仍然存在
-                    if [ "$NEW_PID" = "$PID" ] && [ -n "$NEW_PID" ]; then
-                        log "Killing PID=$NEW_PID"
-                        kill -9 "$NEW_PID"
-                    else
-                        log "Process changed or exited, skip kill"
-                    fi
-
-                    rm -f "$STATE_FILE"
+                    rm -f "$STATE"
                 fi
             fi
         fi
     else
-        [ -f "$STATE_FILE" ] && rm -f "$STATE_FILE"
+        RUN_TIME=0
+        [ -f "$STATE" ] && rm -f "$STATE"
     fi
+
+    # 更新状态 JSON
+    echo "{
+\"runtime\":\"$RUN_TIME\",
+\"run_count\":\"$RUN_COUNT\",
+\"kill_count\":\"$KILL_COUNT\"
+}" > "$JSON_STATUS"
+
+    # 更新日志 JSON（取最后 20 条）
+    echo "[" > "$JSON_LOG"
+    tail -n 20 "$LOG" 2>/dev/null | while read line
+    do
+        echo "{\"log\":\"$line\"}," >> "$JSON_LOG"
+    done
+    echo "{}]" >> "$JSON_LOG"
 
     sleep $CHECK_INTERVAL
 done
