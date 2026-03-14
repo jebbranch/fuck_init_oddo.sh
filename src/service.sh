@@ -8,11 +8,21 @@ BASE="/data/local/tmp/oddo_watchdog"
 STATE="$BASE/state"
 LOG="$BASE/history.log"
 
-WEB="/data/adb/modules/oddo-watchdog/web"
-JSON_STATUS="$WEB/status.json"
-JSON_LOG="$WEB/log.json"
+WEB="/data/adb/modules/oddo-killer/web"
 
+mkdir -p "$WEB"
 mkdir -p "$BASE"
+
+STATUS_JSON="$WEB/status.json"
+LOG_JSON="$WEB/log.json"
+
+# 文件不存在就创建
+[ -f "$STATUS_JSON" ] || echo "{}" > "$STATUS_JSON"
+[ -f "$LOG_JSON" ] || echo "[]" > "$LOG_JSON"
+
+# 权限修正（防止 Web 读不到）
+chmod 644 "$STATUS_JSON"
+chmod 644 "$LOG_JSON"
 
 RUN_COUNT=0
 KILL_COUNT=0
@@ -20,6 +30,7 @@ KILL_COUNT=0
 until [ "$(getprop sys.boot_completed)" = "1" ]; do
     sleep 3
 done
+
 
 # 启动 Web
 busybox httpd -p 8080 -h "$WEB"
