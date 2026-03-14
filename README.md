@@ -2,6 +2,11 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
+## Notice
+这是一个magisk模块，但是同时也兼容Ksu与SukiSU，所以可以在上述三个管理器与其的任一分支构建的框架安装（具体请自测）
+
+This is a Magisk module, but it is also compatible with Ksu and SukiSU, so it can be installed in any of the three managers and any of their branches (please test it yourself).
+
 ## 简介
 
 **oddo_killer** 是一个 Magisk 模块，用于监控指定的进程（默认为 **/vendor/bin/init.oddo.sh**），当该进程连续运行超过设定的时间阈值（默认 60 秒）时，自动将其强制终止，并记录日志。（这个脚本其实是LazyBones为marble机型制作Coloros15的移植包的时候写的修bug脚本，但是有个致命轮询，一旦死循环就会吃cpu然后发热掉电加快）
@@ -93,7 +98,7 @@ Web 面板
 · 安全：Web 面板仅监听本地端口，外部无法访问，请放心使用。
 · 停止模块：若要临时停止监控，可杀死对应进程：pkill -f service.sh，或直接移除模块重启。
 
-## ？常见问题 ！
+** ？常见问题 ！
 
 Q: Web 页面无法访问？
 A: 检查端口是否被占用，或 busybox httpd 是否可用。可尝试手动运行 busybox httpd -p 7891 -h /data/adb/modules/oddo_killer/web 测试。
@@ -104,11 +109,11 @@ A: 请确保目标进程的 PID 未发生变化（如被系统重启）。脚本
 Q: 如何查看调试信息？
 A: 在 service.sh 中取消注释 DEBUG_LOG 相关行，然后重启模块，查看 /data/adb/modules/oddo_killer/cache/debug.log。
 
-##贡献
+## 贡献
 
 欢迎提交 Issue 和 Pull Request 来改进这个项目。
 
-##许可证
+## 许可证
 
 Copyright © 2017-2026 Clockworks Studio & DeepSeek
 
