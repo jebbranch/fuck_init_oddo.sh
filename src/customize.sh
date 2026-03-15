@@ -30,6 +30,7 @@ ui_print "更新日志"
 ui_print "1.1 更新web管理，优化匹配方案"
 ui_print "1.2 修复日志相关问题"
 ui_print "1.3 限制只能同时运行一个脚本"
+ui_print "1.4 重构屎山，合成大便"
 
 ui_print "- 检测 BusyBox..."
 
