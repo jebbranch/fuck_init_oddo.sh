@@ -4,6 +4,7 @@
 
 ## Notice
 这是一个magisk模块，但是同时也兼容Ksu与SukiSU，所以可以在上述三个管理器与其的任一分支构建的框架安装（具体请自测）
+对了，还有一个问题，如果日志出现错位，需要删掉log之类的东西，然后创建空文件代替（提上日程修复了）
 
 This is a Magisk module, but it is also compatible with Ksu and SukiSU, so it can be installed in any of the three managers and any of their branches (please test it yourself).
 
